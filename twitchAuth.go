@@ -1,8 +1,10 @@
-package tokenGetter
+package twitchAuth
 
 import (
 	"log"
 	"net/http"
+	"go/build"
+	"path/filepath"
 	"github.com/skratchdot/open-golang/open"
 	"time"
 )
@@ -20,8 +22,15 @@ func tokenReceived(tokenChannel chan string) func(http.ResponseWriter, *http.Req
 	}
 }
 
-func getToken(clientid string)(token string){
-	fs := http.FileServer(http.Dir("static"))
+func GetToken(clientid string)(token string){
+	importPath := "github.com/simplyserenity/twitchOAuth"
+
+	p, err := build.Default.Import(importPath, "", build.FindOnly)
+	if err != nil {
+		panic(err)
+	}
+
+	fs := http.FileServer(http.Dir(filepath.Join(p.Dir, "static")))
 
 	tokenChannel := make(chan string)
 	handleToken := tokenReceived(tokenChannel)
