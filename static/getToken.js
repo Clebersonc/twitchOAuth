@@ -5,11 +5,16 @@ window.onload = function () {
 
     if (typeof token !== "undefined"){
         var xhr = new XMLHttpRequest();
-        xhr.open("GET", "/token?token=" + token, true);
-        xhr.onload = function(){
-          window.close();
-        };
+        xhr.open("GET", "/token?token=" + token, false);
         xhr.send(null);
+
+        if (xhr.status === 200) {
+            result.innerHTML = "You're all set! Feel free to close this browser window."
+            window.close();
+        } else {
+            result.innerHTML = "Err... something isn't quite right...";
+        }
+
     } else {
         result.innerHTML = "Unforunately something isn't quite right. Are you authorized the app on twitch?";
     }

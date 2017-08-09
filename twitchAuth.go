@@ -1,19 +1,19 @@
 package twitchAuth
 
 import (
-	"log"
 	"net/http"
 	"go/build"
 	"path/filepath"
 	"github.com/skratchdot/open-golang/open"
 	"time"
+	"context"
 )
 
 func tokenReceived(tokenChannel chan string) func(http.ResponseWriter, *http.Request){
 	return func(w http.ResponseWriter, r *http.Request){
 		token := r.URL.Query().Get("token")
 		if token != ""{
-			log.Println("token get!")
+			//log.Println("token get!")
 			w.WriteHeader(http.StatusOK)
 			tokenChannel <- token
 		} else {
@@ -36,7 +36,7 @@ func GetToken(clientid string)(token string){
 	handleToken := tokenReceived(tokenChannel)
 	http.Handle("/", fs)
 	http.HandleFunc("/token", handleToken)
-	log.Println("User sent to auth page.")
+	//log.Println("User sent to auth page.")
 
 	srv := &http.Server{Addr: ":8080"}
 
@@ -44,15 +44,15 @@ func GetToken(clientid string)(token string){
 		srv.ListenAndServe()
 	}()
 
-	log.Println("Server started!")
+	//log.Println("Server started!")
 
 	open.Run("https://api.twitch.tv/kraken/oauth2/authorize?client_id=" + clientid + "&redirect_uri=http://localhost:8080/authorize.html&response_type=token&scope=chat_login+user_read")
 
 	uToken := <- tokenChannel
 
-	time.Sleep(100 * time.Millisecond)
+	ctx, _ := context.WithTimeout(context.Background(), 1 * time.Second)
 
-	srv.Close()		//was going to use shutdown but it would throw nil pointer errors every time
+	srv.Shutdown(ctx)
 
 	return uToken
 }
