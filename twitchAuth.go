@@ -2,8 +2,6 @@ package twitchAuth
 
 import (
 	"net/http"
-	"go/build"
-	"path/filepath"
 	"github.com/skratchdot/open-golang/open"
 	"time"
 	"context"
@@ -27,23 +25,63 @@ func tokenReceived(tokenChannel chan string) func(http.ResponseWriter, *http.Req
 	}
 }
 
+func authorizeFunc(w http.ResponseWriter, r *http.Request){
+	w.Write([]byte(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thanks</title>
+    <script type="text/javascript">window.onload = function () {
+    var token = getHashParams().access_token;
+
+    var result = document.getElementById("result");
+
+    if (typeof token !== "undefined"){
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/token?token=" + token, false);
+        xhr.send(null);
+
+        if (xhr.status === 200) {
+            result.innerHTML = "You're all set! Feel free to close this browser window."
+            window.close();
+        } else {
+            result.innerHTML = "Err... something isn't quite right...";
+        }
+
+    } else {
+        result.innerHTML = "Unforunately something isn't quite right. Are you authorized the app on twitch?";
+    }
+};
+
+function getHashParams() {
+
+    var hashParams = {};
+    var e,
+        a = /\+/g,  // Regex for replacing addition symbol with a space
+        r = /([^&;=]+)=?([^&;]*)/g,
+        d = function (s) { return decodeURIComponent(s.replace(a, " ")); },
+        q = window.location.hash.substring(1);
+
+    while (e = r.exec(q))
+        hashParams[d(e[1])] = d(e[2]);
+
+    return hashParams;
+}</script>
+</head>
+<body>
+    <p id = "result"></p>
+</body>
+</html>`))
+}
+
 func GetToken(clientid string, scopes []string)(token string, err error){
-	importPath := "github.com/simplyserenity/twitchOAuth"
-
-	p, err := build.Default.Import(importPath, "", build.FindOnly)
-	if err != nil {
-		return "", err
-	}
-
-	fs := http.FileServer(http.Dir(filepath.Join(p.Dir, "static")))
-
-	confFile, oErr := os.OpenFile(p.Dir + "/config.dat", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	confFile, oErr := os.OpenFile("config.dat", os.O_RDWR|os.O_CREATE, os.ModePerm)
 
 	if oErr != nil {
 		return "", oErr
 	}
 
-	content, fErr := ioutil.ReadFile(p.Dir + "/config.dat")
+	content, fErr := ioutil.ReadFile("config.dat")
 
 	if fErr != nil {
 		return "", fErr
@@ -53,7 +91,7 @@ func GetToken(clientid string, scopes []string)(token string, err error){
 
 	tokenChannel := make(chan string)
 	handleToken := tokenReceived(tokenChannel)
-	http.Handle("/", fs)
+	http.HandleFunc("/authorize", authorizeFunc)
 	http.HandleFunc("/token", handleToken)
 	//log.Println("User sent to auth page.")
 
@@ -65,7 +103,7 @@ func GetToken(clientid string, scopes []string)(token string, err error){
 
 	//log.Println("Server started!")
 	formattedScopes := strings.Join(scopes, "+")
-	open.Run("https://api.twitch.tv/kraken/oauth2/authorize?client_id=" + clientid + "&redirect_uri=http://localhost:8080/authorize.html&response_type=token&scope="+formattedScopes)
+	open.Run("https://api.twitch.tv/kraken/oauth2/authorize?client_id=" + clientid + "&redirect_uri=http://localhost:8080/authorize&response_type=token&scope="+formattedScopes)
 
 	uToken := <- tokenChannel
 
