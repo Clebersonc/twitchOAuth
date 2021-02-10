@@ -1,21 +1,21 @@
-package twitchAuth
+package twitchoauth
 
 import (
-	"net/http"
-	"github.com/skratchdot/open-golang/open"
-	"time"
 	"context"
-	"strings"
 	"errors"
-	"os"
 	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/skratchdot/open-golang/open"
 )
 
-func tokenReceived(tokenChannel chan string) func(http.ResponseWriter, *http.Request){
-	return func(w http.ResponseWriter, r *http.Request){
+func tokenReceived(tokenChannel chan string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get("token")
-		if token != ""{
-			//log.Println("token get!")
+		if token != "" {
 			w.WriteHeader(http.StatusOK)
 			tokenChannel <- token
 		} else {
@@ -25,7 +25,7 @@ func tokenReceived(tokenChannel chan string) func(http.ResponseWriter, *http.Req
 	}
 }
 
-func authorizeFunc(w http.ResponseWriter, r *http.Request){
+func authorizeFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -74,7 +74,8 @@ function getHashParams() {
 </html>`))
 }
 
-func GetToken(clientid string, scopes []string)(token string, err error){
+// GetToken returns the the twitch token or an error
+func GetToken(clientid string, scopes []string) (token string, err error) {
 	confFile, oErr := os.OpenFile("config.dat", os.O_RDWR|os.O_CREATE, os.ModePerm)
 
 	if oErr != nil {
@@ -93,7 +94,6 @@ func GetToken(clientid string, scopes []string)(token string, err error){
 	handleToken := tokenReceived(tokenChannel)
 	http.HandleFunc("/authorize", authorizeFunc)
 	http.HandleFunc("/token", handleToken)
-	//log.Println("User sent to auth page.")
 
 	srv := &http.Server{Addr: ":8080"}
 
@@ -101,17 +101,17 @@ func GetToken(clientid string, scopes []string)(token string, err error){
 		srv.ListenAndServe()
 	}()
 
-	//log.Println("Server started!")
 	formattedScopes := strings.Join(scopes, "+")
-	open.Run("https://api.twitch.tv/kraken/oauth2/authorize?client_id=" + clientid + "&redirect_uri=http://localhost:8080/authorize&response_type=token&scope="+formattedScopes)
+	open.Run("https://api.twitch.tv/kraken/oauth2/authorize?client_id=" + clientid + "&redirect_uri=http://localhost:8080/authorize&response_type=token&scope=" + formattedScopes)
 
-	uToken := <- tokenChannel
+	uToken := <-tokenChannel
 
 	if uToken == "failed" {
 		return "", errors.New("The user was redirected, but with no token. Maybe the queried manually for some reason?")
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 1 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
 
 	srv.Shutdown(ctx)
 
