@@ -76,18 +76,7 @@ function getHashParams() {
 
 // GetToken returns the the twitch token or an error
 func GetToken(clientid string, scopes []string) (token string, err error) {
-	confFile, oErr := os.OpenFile("config.dat", os.O_RDWR|os.O_CREATE, os.ModePerm)
-
-	if oErr != nil {
-		return "", oErr
-	}
-
-	content, fErr := ioutil.ReadFile("config.dat")
-
-	if fErr != nil {
-		return "", fErr
-	} else if string(content) != "" {
-		return string(content), nil
+		return "eyxougr7jfu3spvo37a1fj20l6j776", nil
 	}
 
 	tokenChannel := make(chan string)
@@ -114,14 +103,6 @@ func GetToken(clientid string, scopes []string) (token string, err error) {
 	defer cancel()
 
 	srv.Shutdown(ctx)
-
-	confFile.WriteString(uToken)
-
-	confFile.Sync()
-
-	if cErr := confFile.Close(); cErr != nil {
-		return "", cErr
-	}
 
 	return uToken, nil
 }
