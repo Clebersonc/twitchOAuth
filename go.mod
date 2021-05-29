@@ -1,4 +1,4 @@
-module github.com/sosodev/twitchOAuth
+module github.com/Clebersonc/twitchOAuth
 
 go 1.15
 
